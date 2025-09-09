@@ -1,0 +1,36 @@
+<!-- JWT Validation Policy Fragment -->
+<!-- This fragment validates JWT tokens from Microsoft Entra ID -->
+<fragment>
+    <validate-jwt header-name="Authorization" 
+                  failed-validation-httpcode="401" 
+                  failed-validation-error-message="Unauthorized. Access token is missing or invalid.">
+        
+        <!-- OpenID configuration endpoint for your tenant -->
+        <openid-config url="https://login.microsoftonline.com/{{tenant-id}}/v2.0/.well-known/openid-configuration" />
+        
+        <!-- Audiences that are allowed (your app registration client ID) -->
+        <audiences>
+            <audience>api://{{client-id}}</audience>
+            <audience>{{client-id}}</audience>
+        </audiences>
+        
+        <!-- Token issuers -->
+        <issuers>
+            <issuer>https://sts.windows.net/{{tenant-id}}/</issuer>
+            <issuer>https://login.microsoftonline.com/{{tenant-id}}/v2.0</issuer>
+        </issuers>
+        
+        <!-- Required claims validation -->
+        <required-claims>
+            <!-- Ensure the token is for our API -->
+            <claim name="aud">
+                <value>api://{{client-id}}</value>
+                <value>{{client-id}}</value>
+            </claim>
+            <!-- Ensure token is not expired -->
+            <claim name="exp" match="all">
+                <value>@(DateTimeOffset.UtcNow.ToUnixTimeSeconds())</value>
+            </claim>
+        </required-claims>
+    </validate-jwt>
+</fragment>

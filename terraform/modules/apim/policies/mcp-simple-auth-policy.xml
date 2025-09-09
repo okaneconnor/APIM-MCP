@@ -1,0 +1,65 @@
+<!-- MCP API Simple Authentication Policy -->
+<policies>
+    <inbound>
+        <base />
+        
+        <!-- Handle OPTIONS preflight requests (no auth required) -->
+        <choose>
+            <when condition="@(context.Request.Method == "OPTIONS")">
+                <return-response>
+                    <set-status code="200" />
+                    <set-header name="Access-Control-Allow-Origin" exists-action="override">
+                        <value>*</value>
+                    </set-header>
+                    <set-header name="Access-Control-Allow-Methods" exists-action="override">
+                        <value>GET, POST, OPTIONS</value>
+                    </set-header>
+                    <set-header name="Access-Control-Allow-Headers" exists-action="override">
+                        <value>Authorization, Content-Type</value>
+                    </set-header>
+                </return-response>
+            </when>
+        </choose>
+        
+        <!-- JWT Token Validation -->
+        <validate-jwt header-name="Authorization" 
+                      failed-validation-httpcode="401" 
+                      failed-validation-error-message="Unauthorized. Access token is missing or invalid.">
+            
+            <!-- OpenID configuration endpoint for your tenant -->
+            <openid-config url="https://login.microsoftonline.com/{{tenant-id}}/v2.0/.well-known/openid-configuration" />
+            
+            <!-- Audiences that are allowed -->
+            <audiences>
+                <audience>api://{{client-id}}</audience>
+                <audience>{{client-id}}</audience>
+            </audiences>
+            
+            <!-- Token issuers -->
+            <issuers>
+                <issuer>https://sts.windows.net/{{tenant-id}}/</issuer>
+                <issuer>https://login.microsoftonline.com/{{tenant-id}}/v2.0</issuer>
+            </issuers>
+        </validate-jwt>
+        
+        <!-- Set backend service to forward to function app MCP endpoint -->
+        <set-backend-service base-url="https://{{function-app-hostname}}/api/mcp" />
+        
+    </inbound>
+    
+    <backend>
+        <base />
+    </backend>
+    
+    <outbound>
+        <base />
+        <!-- Add CORS headers -->
+        <set-header name="Access-Control-Allow-Origin" exists-action="override">
+            <value>*</value>
+        </set-header>
+    </outbound>
+    
+    <on-error>
+        <base />
+    </on-error>
+</policies>

@@ -1,0 +1,42 @@
+<!-- Protected Resource Metadata (PRM) Policy for MCP OAuth -->
+<policies>
+    <inbound>
+        <base />
+        
+        <!-- Return PRM document for OAuth discovery -->
+        <return-response>
+            <set-status code="200" reason="OK" />
+            <set-header name="Content-Type" exists-action="override">
+                <value>application/json</value>
+            </set-header>
+            <set-body>@{
+                // Protected Resource Metadata for OAuth discovery
+                var host = context.Request.Headers.GetValueOrDefault("Host", "apim-mcp-dev-7204b7.azure-api.net");
+                var baseUrl = "https://" + host;
+                
+                return "{" +
+                    "\"resource\": \"" + baseUrl + "/mcp\"," +
+                    "\"authorization_servers\": [" +
+                        "\"https://login.microsoftonline.com/{{tenant-id}}/v2.0\"" +
+                    "]," +
+                    "\"scopes_supported\": [\"api://108d6e4f-35d4-4894-a0d9-6cb83b198a47/user_impersonation\", \"api://108d6e4f-35d4-4894-a0d9-6cb83b198a47/MCP.Read\"]," +
+                    "\"bearer_methods_supported\": [\"header\"]," +
+                    "\"resource_name\": \"APIM MCP Server\"," +
+                    "\"resource_documentation\": \"https://github.com/Azure/api-management-policy-snippets\"" +
+                "}";
+            }</set-body>
+        </return-response>
+    </inbound>
+    
+    <backend>
+        <base />
+    </backend>
+    
+    <outbound>
+        <base />
+    </outbound>
+    
+    <on-error>
+        <base />
+    </on-error>
+</policies>

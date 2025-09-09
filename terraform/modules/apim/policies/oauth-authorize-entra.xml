@@ -1,0 +1,56 @@
+<policies>
+    <inbound>
+        <base />
+        <!-- Extract OAuth parameters -->
+        <set-variable name="client_id" value="@(context.Request.Url.Query.GetValueOrDefault(&quot;client_id&quot;, &quot;&quot;))" />
+        <set-variable name="redirect_uri" value="@(context.Request.Url.Query.GetValueOrDefault(&quot;redirect_uri&quot;, &quot;&quot;))" />
+        <set-variable name="state" value="@(context.Request.Url.Query.GetValueOrDefault(&quot;state&quot;, &quot;&quot;))" />
+        <set-variable name="response_type" value="@(context.Request.Url.Query.GetValueOrDefault(&quot;response_type&quot;, &quot;code&quot;))" />
+        <set-variable name="code_challenge" value="@(context.Request.Url.Query.GetValueOrDefault(&quot;code_challenge&quot;, &quot;&quot;))" />
+        <set-variable name="code_challenge_method" value="@(context.Request.Url.Query.GetValueOrDefault(&quot;code_challenge_method&quot;, &quot;&quot;))" />
+        <set-variable name="scope" value="@(context.Request.Url.Query.GetValueOrDefault(&quot;scope&quot;, &quot;&quot;))" />
+        
+        <!-- Redirect to real Entra ID authorization endpoint -->
+        <return-response>
+            <set-status code="302" reason="Found" />
+            <set-header name="Location" exists-action="override">
+                <value>@{
+                    var tenantId = "90477fac-f56f-4b7b-8885-b6c2b2f78ff2";
+                    var clientId = "108d6e4f-35d4-4894-a0d9-6cb83b198a47";
+                    var redirectUri = (string)context.Variables["redirect_uri"];
+                    var state = (string)context.Variables["state"];
+                    var responseType = (string)context.Variables["response_type"];
+                    var codeChallenge = (string)context.Variables["code_challenge"];
+                    var codeChallengeMethod = (string)context.Variables["code_challenge_method"];
+                    var scope = string.IsNullOrEmpty((string)context.Variables["scope"]) 
+                        ? "api://108d6e4f-35d4-4894-a0d9-6cb83b198a47/.default" 
+                        : (string)context.Variables["scope"];
+                    
+                    var authUrl = $"https://login.microsoftonline.com/{tenantId}/oauth2/v2.0/authorize";
+                    authUrl += $"?client_id={clientId}";
+                    authUrl += $"&amp;response_type={responseType}";
+                    authUrl += $"&amp;redirect_uri={Uri.EscapeDataString(redirectUri)}";
+                    authUrl += $"&amp;scope={Uri.EscapeDataString(scope)}";
+                    authUrl += $"&amp;state={state}";
+                    
+                    if (!string.IsNullOrEmpty(codeChallenge))
+                    {
+                        authUrl += $"&amp;code_challenge={codeChallenge}";
+                        authUrl += $"&amp;code_challenge_method={codeChallengeMethod}";
+                    }
+                    
+                    return authUrl;
+                }</value>
+            </set-header>
+        </return-response>
+    </inbound>
+    <backend>
+        <base />
+    </backend>
+    <outbound>
+        <base />
+    </outbound>
+    <on-error>
+        <base />
+    </on-error>
+</policies>

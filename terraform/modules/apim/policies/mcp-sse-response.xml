@@ -1,0 +1,57 @@
+<policies>
+    <inbound>
+        <base />
+        <!-- Check authorization -->
+        <choose>
+            <when condition="@(context.Request.Headers.GetValueOrDefault(&quot;Authorization&quot;,&quot;&quot;) == &quot;Bearer test-token&quot;)">
+                <!-- Token is valid, return SSE response -->
+                <return-response>
+                    <set-status code="200" reason="OK" />
+                    <set-header name="Content-Type" exists-action="override">
+                        <value>text/event-stream</value>
+                    </set-header>
+                    <set-header name="Cache-Control" exists-action="override">
+                        <value>no-cache</value>
+                    </set-header>
+                    <set-header name="Connection" exists-action="override">
+                        <value>keep-alive</value>
+                    </set-header>
+                    <set-body>@{
+                        // Return initial MCP hello message
+                        var hello = new {
+                            jsonrpc = "2.0",
+                            method = "initialized",
+                            @params = new {
+                                protocolVersion = "2024-11-05",
+                                capabilities = new {
+                                    tools = new {},
+                                    logging = new {}
+                                },
+                                serverInfo = new {
+                                    name = "azure-mcp-server",
+                                    version = "1.0.0"
+                                }
+                            }
+                        };
+                        return "data: " + Newtonsoft.Json.JsonConvert.SerializeObject(hello) + "\n\n";
+                    }</set-body>
+                </return-response>
+            </when>
+            <otherwise>
+                <return-response>
+                    <set-status code="401" reason="Unauthorized" />
+                    <set-body>{"statusCode": 401, "message": "Authorization required"}</set-body>
+                </return-response>
+            </otherwise>
+        </choose>
+    </inbound>
+    <backend>
+        <base />
+    </backend>
+    <outbound>
+        <base />
+    </outbound>
+    <on-error>
+        <base />
+    </on-error>
+</policies>
