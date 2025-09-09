@@ -1,0 +1,19 @@
+<policies>
+    <inbound>
+        <base />
+        <!-- Simplified policy for testing MCP connectivity -->
+        <!-- TODO: Add proper authentication in production -->
+        
+        <!-- Set backend service to forward to function app MCP endpoint -->
+        <set-backend-service base-url="https://{{function-app-hostname}}/api/mcp" />
+    </inbound>
+    <backend>
+        <base />
+    </backend>
+    <outbound>
+        <base />
+    </outbound>
+    <on-error>
+        <base />
+    </on-error>
+</policies>

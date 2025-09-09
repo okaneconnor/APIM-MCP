@@ -1,0 +1,27 @@
+<!-- CORS Policy Fragment -->
+<!-- This fragment handles Cross-Origin Resource Sharing for browser clients -->
+<fragment>
+    <cors allow-credentials="true">
+        <allowed-origins>
+            <!-- Add your allowed origins here -->
+            <!-- For development/testing, you can use * but be more specific in production -->
+            <origin>http://localhost:3000</origin>
+            <origin>http://localhost:4200</origin>
+            <origin>https://localhost:5001</origin>
+            <!-- Add your production domains -->
+            <origin>https://*.azurewebsites.net</origin>
+            <origin>https://*.blob.core.windows.net</origin>
+        </allowed-origins>
+        <allowed-methods preflight-result-max-age="300">
+            <method>GET</method>
+            <method>POST</method>
+            <method>OPTIONS</method>
+        </allowed-methods>
+        <allowed-headers>
+            <header>*</header>
+        </allowed-headers>
+        <expose-headers>
+            <header>*</header>
+        </expose-headers>
+    </cors>
+</fragment>

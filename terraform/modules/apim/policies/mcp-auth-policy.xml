@@ -1,0 +1,117 @@
+<!-- MCP API Authentication Policy -->
+<!-- This policy enforces authentication and authorization for MCP endpoints -->
+<policies>
+    <inbound>
+        <base />
+        
+        <!-- CORS handling for browser-based clients -->
+        <cors allow-credentials="true">
+            <allowed-origins>
+                <origin>http://localhost:*</origin>
+                <origin>https://localhost:*</origin>
+                <origin>https://*.azurewebsites.net</origin>
+                <origin>https://*.blob.core.windows.net</origin>
+            </allowed-origins>
+            <allowed-methods preflight-result-max-age="300">
+                <method>GET</method>
+                <method>POST</method>
+                <method>OPTIONS</method>
+            </allowed-methods>
+            <allowed-headers>
+                <header>Authorization</header>
+                <header>Content-Type</header>
+                <header>Accept</header>
+                <header>X-Requested-With</header>
+            </allowed-headers>
+        </cors>
+        
+        <!-- Handle OPTIONS preflight requests (no auth required) -->
+        <choose>
+            <when condition="@(context.Request.Method == "OPTIONS")">
+                <return-response>
+                    <set-status code="200" />
+                </return-response>
+            </when>
+        </choose>
+        
+        <!-- JWT Token Validation -->
+        <validate-jwt header-name="Authorization" 
+                      failed-validation-httpcode="401" 
+                      failed-validation-error-message="Unauthorized. Access token is missing or invalid.">
+            
+            <!-- OpenID configuration endpoint for your tenant -->
+            <openid-config url="https://login.microsoftonline.com/{{tenant-id}}/v2.0/.well-known/openid-configuration" />
+            
+            <!-- Audiences that are allowed -->
+            <audiences>
+                <audience>api://{{client-id}}</audience>
+                <audience>{{client-id}}</audience>
+            </audiences>
+            
+            <!-- Token issuers -->
+            <issuers>
+                <issuer>https://sts.windows.net/{{tenant-id}}/</issuer>
+                <issuer>https://login.microsoftonline.com/{{tenant-id}}/v2.0</issuer>
+            </issuers>
+            
+            <!-- Required claims validation -->
+            <required-claims>
+                <claim name="aud" match="any">
+                    <value>api://{{client-id}}</value>
+                    <value>{{client-id}}</value>
+                </claim>
+            </required-claims>
+        </validate-jwt>
+        
+        <!-- Rate limiting by subject (user) -->
+        <rate-limit-by-key calls="100" 
+                           renewal-period="60" 
+                           counter-key="@(context.Request.Headers.GetValueOrDefault("Authorization","").AsJwt()?.Subject ?? "anonymous")" />
+        
+        <!-- Set backend service to forward to function app MCP endpoint -->
+        <set-backend-service base-url="https://{{function-app-hostname}}/api/mcp" />
+        
+        <!-- Forward the token to backend for additional validation if needed -->
+        <set-header name="X-User-Subject" exists-action="override">
+            <value>@(context.Request.Headers.GetValueOrDefault("Authorization","").AsJwt()?.Subject ?? "unknown")</value>
+        </set-header>
+        
+    </inbound>
+    
+    <backend>
+        <base />
+    </backend>
+    
+    <outbound>
+        <base />
+        <!-- Add security headers -->
+        <set-header name="X-Content-Type-Options" exists-action="override">
+            <value>nosniff</value>
+        </set-header>
+        <set-header name="X-Frame-Options" exists-action="override">
+            <value>DENY</value>
+        </set-header>
+    </outbound>
+    
+    <on-error>
+        <base />
+        <!-- Customize error responses -->
+        <choose>
+            <when condition="@(context.Response.StatusCode == 401)">
+                <return-response>
+                    <set-status code="401" reason="Unauthorized" />
+                    <set-header name="WWW-Authenticate" exists-action="override">
+                        <value>Bearer realm="MCP API", error="invalid_token"</value>
+                    </set-header>
+                    <set-body>@{
+                        return "{" +
+                            "\"error\": \"unauthorized\"," +
+                            "\"error_description\": \"Authentication required. Please provide a valid Bearer token.\"," +
+                            "\"timestamp\": \"" + DateTime.UtcNow.ToString("o") + "\"" +
+                        "}";
+                    }</set-body>
+                </return-response>
+            </when>
+        </choose>
+    </on-error>
+</policies>

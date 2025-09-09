@@ -1,0 +1,72 @@
+<!-- Simple OAuth Callback Endpoint Policy -->
+<policies>
+    <inbound>
+        <base />
+        
+        <!-- Extract parameters from request -->
+        <set-variable name="code" value="@(context.Request.Url.Query.GetValueOrDefault("code", ""))" />
+        <set-variable name="state" value="@(context.Request.Url.Query.GetValueOrDefault("state", ""))" />
+        <set-variable name="error" value="@(context.Request.Url.Query.GetValueOrDefault("error", ""))" />
+        
+        <!-- Check for errors from authorization server -->
+        <choose>
+            <when condition="@(!string.IsNullOrEmpty((string)context.Variables["error"]))">
+                <return-response>
+                    <set-status code="400" reason="Bad Request" />
+                    <set-header name="Content-Type" exists-action="override">
+                        <value>application/json</value>
+                    </set-header>
+                    <set-body>@{
+                        var error = (string)context.Variables["error"];
+                        var errorDescription = context.Request.Url.Query.GetValueOrDefault("error_description", "Authorization failed");
+                        
+                        return "{\"error\": \"" + error + "\", \"error_description\": \"" + errorDescription + "\"}";
+                    }</set-body>
+                </return-response>
+            </when>
+        </choose>
+        
+        <!-- Validate authorization code -->
+        <choose>
+            <when condition="@(string.IsNullOrEmpty((string)context.Variables["code"]))">
+                <return-response>
+                    <set-status code="400" reason="Bad Request" />
+                    <set-header name="Content-Type" exists-action="override">
+                        <value>application/json</value>
+                    </set-header>
+                    <set-body>{"error": "invalid_request", "error_description": "Missing authorization code"}</set-body>
+                </return-response>
+            </when>
+        </choose>
+        
+        <!-- For this simple implementation, we'll just return success -->
+        <!-- In production, you would exchange the code for tokens here -->
+        <return-response>
+            <set-status code="200" reason="OK" />
+            <set-header name="Content-Type" exists-action="override">
+                <value>application/json</value>
+            </set-header>
+            <set-body>@{
+                var code = (string)context.Variables["code"];
+                var state = (string)context.Variables["state"];
+                
+                return "{" + 
+                    "\"status\": \"success\"," + 
+                    "\"message\": \"Authorization callback received\"," + 
+                    "\"code\": \"" + code + "\"," + 
+                    "\"state\": \"" + state + "\"," + 
+                    "\"next_step\": \"Exchange this code for tokens at /oauth/token endpoint\"" + 
+                "}";
+            }</set-body>
+        </return-response>
+    </inbound>
+    <backend>
+        <base />
+    </backend>
+    <outbound>
+        <base />
+    </outbound>
+    <on-error>
+        <base />
+    </on-error>
+</policies>

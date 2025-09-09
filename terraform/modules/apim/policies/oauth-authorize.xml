@@ -1,0 +1,34 @@
+<!-- OAuth Authorization Endpoint - Redirect to Microsoft -->
+<policies>
+    <inbound>
+        <base />
+        
+        <!-- Redirect to Microsoft OAuth2 authorization endpoint -->
+        <return-response>
+            <set-status code="302" reason="Found" />
+            <set-header name="Location" exists-action="override">
+                <value>@{
+                    // Build the Microsoft OAuth authorization URL
+                    var queryString = context.Request.Url.QueryString;
+                    
+                    // Replace the scope if it's requesting access_as_user (old scope)
+                    if (queryString.Contains("access_as_user")) {
+                        queryString = queryString.Replace("access_as_user", "user_impersonation");
+                    }
+                    
+                    // Redirect to Microsoft's authorization endpoint with all original parameters
+                    return "https://login.microsoftonline.com/{{tenant-id}}/oauth2/v2.0/authorize" + queryString;
+                }</value>
+            </set-header>
+        </return-response>
+    </inbound>
+    <backend>
+        <base />
+    </backend>
+    <outbound>
+        <base />
+    </outbound>
+    <on-error>
+        <base />
+    </on-error>
+</policies>

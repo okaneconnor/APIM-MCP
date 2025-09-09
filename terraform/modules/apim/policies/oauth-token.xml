@@ -1,0 +1,34 @@
+<!-- OAuth Token Endpoint - Proxy to Microsoft -->
+<policies>
+    <inbound>
+        <base />
+        
+        <!-- Forward token request to Microsoft's token endpoint -->
+        <send-request mode="new" response-variable-name="tokenResponse" timeout="30" ignore-error="false">
+            <set-url>https://login.microsoftonline.com/{{tenant-id}}/oauth2/v2.0/token</set-url>
+            <set-method>POST</set-method>
+            <set-header name="Content-Type" exists-action="override">
+                <value>application/x-www-form-urlencoded</value>
+            </set-header>
+            <set-body>@(context.Request.Body.As<string>(preserveContent: true))</set-body>
+        </send-request>
+        
+        <!-- Return Microsoft's response -->
+        <return-response response-variable-name="tokenResponse">
+            <set-status code="@(((IResponse)context.Variables["tokenResponse"]).StatusCode)" 
+                       reason="@(((IResponse)context.Variables["tokenResponse"]).StatusReason)" />
+            <set-header name="Content-Type" exists-action="override">
+                <value>application/json</value>
+            </set-header>
+        </return-response>
+    </inbound>
+    <backend>
+        <base />
+    </backend>
+    <outbound>
+        <base />
+    </outbound>
+    <on-error>
+        <base />
+    </on-error>
+</policies>

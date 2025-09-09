@@ -1,0 +1,40 @@
+<!-- MCP API Policy - No Authentication (Development/Testing Only) -->
+<!-- WARNING: This policy should only be used for development/testing -->
+<policies>
+    <inbound>
+        <base />
+        
+        <!-- CORS handling for browser-based clients -->
+        <cors allow-credentials="false">
+            <allowed-origins>
+                <origin>*</origin>
+            </allowed-origins>
+            <allowed-methods>
+                <method>*</method>
+            </allowed-methods>
+            <allowed-headers>
+                <header>*</header>
+            </allowed-headers>
+        </cors>
+        
+        <!-- Set backend service to forward to function app MCP endpoint -->
+        <set-backend-service base-url="https://{{function-app-hostname}}/api/mcp" />
+        
+        <!-- Add a warning header for development mode -->
+        <set-header name="X-Auth-Mode" exists-action="override">
+            <value>development-no-auth</value>
+        </set-header>
+    </inbound>
+    
+    <backend>
+        <base />
+    </backend>
+    
+    <outbound>
+        <base />
+    </outbound>
+    
+    <on-error>
+        <base />
+    </on-error>
+</policies>
